@@ -9,14 +9,13 @@ from . models import User,Book
 from django.contrib.auth.hashers import make_password, check_password
 import jwt
 from library.utils.jwt_token import get_tokens_for_user,validate_token
-from decouple import config
-# import decode
 
 
 ########################################## Project Import ######################################################################
 
 # Create your views here.
 
+# register users
 class RegisterUser(APIView):
     def post(self,request,format=None):
         serializer=UserSerializer(data=request.data)
@@ -26,14 +25,18 @@ class RegisterUser(APIView):
             return Response({"message":'User Registeres Successfully'},status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
    
-   
+# login users   
 class LoginUser(APIView):
     def post(self,request,format=None):
         serializer=UserLoginSerializer(data=request.data)
         if serializer.is_valid():
             username=serializer.data.get('username')
             password=serializer.data.get('password')
-            user_data = User.objects.get(username=username)
+            user_data = User.objects.filter(username=username).first()
+            if not user_data:
+              return Response({"message":"user does not exist"},status=status.HTTP_400_BAD_REQUEST)
+
+
             user = check_password(password, user_data.password)
             
             if user:
@@ -47,6 +50,7 @@ class LoginUser(APIView):
 
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
+# add ,remove,get,update books by librarian
 class BookOperation(APIView):
  
     def get(self,request,pk=None,format=None):
@@ -185,3 +189,43 @@ class MemberDelete(APIView):
         del_=User.objects.get(id=data_)
         del_.delete()
         return Response({"message":"member has been deleted successfully"},status=status.HTTP_200_OK)
+
+# fetch users details as a librarian and remove members
+class ListRemoveMembers(APIView):
+    def get(self,request,format=None):
+        header_=request.META['HTTP_AUTHORIZATION'].split(" ")  
+        status_,message,data_=validate_token(header_[1],librarian=True)
+        if not status_ and not message:
+            return Response({"message":"no permission to add"})
+        if not status_:
+            return Response({"message":'Token Authentication failed'},status=status.HTTP_401_UNAUTHORIZED)
+        filtered=User.objects.filter(is_librarian=0)
+        if not filtered:
+            return Response({"data":[],"message":"users not available"},status=status.HTTP_404_NOT_FOUND)
+        emp_dic={}
+        users_data=[]
+        for i in filtered:
+            emp_dic.update({"id":i.id,"username":i.username,"is_librarian":i.is_librarian})
+            users_data.append(emp_dic)
+            emp_dic={}
+
+        return Response({"data":users_data,"message":'Book added Successfully'},status=status.HTTP_200_OK)
+
+# remove member by librarian
+    def delete(self,request,pk=None,format=None):
+        header_=request.META['HTTP_AUTHORIZATION'].split(" ")  
+        status_,message,data_=validate_token(header_[1],librarian=True)
+        if not status_ and not message:
+            return Response({"message":"no permission to remove data"})
+        if not status_:
+            return Response({"message":'Token Authentication failed'},status=status.HTTP_401_UNAUTHORIZED)
+        
+        query=Book.objects.filter(user__in=User.objects.filter(id=pk,is_librarian=0))
+        if query:
+            return Response({"message":"member is pending to return books"},status=status.HTTP_404_NOT_FOUND)
+        del_=User.objects.filter(id=pk,is_librarian=0).first()
+
+        if del_ is None:
+            return Response({"message":"not a member id"},status=status.HTTP_400_BAD_REQUEST)
+        del_.delete()
+        return Response({"message":'member removed successfully'},status=status.HTTP_200_OK)

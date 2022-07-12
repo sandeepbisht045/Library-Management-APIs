@@ -13,5 +13,7 @@ urlpatterns = [
     path('book/return/<int:pk>',views.BookReturn.as_view() ),
     path('book/borrow/<int:pk>',views.BookBorrow.as_view() ),
     path('member/delete/<int:pk>',views.MemberDelete.as_view() ),
+    path('member/remove/<int:pk>',views.ListRemoveMembers.as_view() ),
+    path('member/lists',views.ListRemoveMembers.as_view() ),
 
 ]

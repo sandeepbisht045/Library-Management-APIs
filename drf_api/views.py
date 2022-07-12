@@ -66,7 +66,7 @@ class BookOperation(APIView):
             
         query=Book.objects.all()
         serializer=BookOperationSerializer(query,many=True)
-        return Response({"data":serializer.data},status=status.HTTP_200_OK)
+        return Response({"data":"jjsjsjsjsjsjs"},status=status.HTTP_200_OK)
 
 # add books in system by librarian
     def post(self,request,format=None):
@@ -116,20 +116,6 @@ class BookOperation(APIView):
         query.delete()
         return Response({"message":'Book removed successfully'},status=status.HTTP_200_OK)
 
-
-# add books in system by librarian
-    def post(self,request,format=None):
-        header_=request.META['HTTP_AUTHORIZATION'].split(" ")  
-        status_,message,data_=validate_token(header_[1],librarian=True)
-        if not status_ and not message:
-            return Response({"message":"no permission to add"})
-        if not status_:
-            return Response({"message":'Token Authentication failed'},status=status.HTTP_401_UNAUTHORIZED)
-        serializer=BookOperationSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message":'Book added Successfully'},status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 # borrow book by member
 class BookBorrow(APIView):
